@@ -1,0 +1,1642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>袋中水的旅行 · 水循环实验</title>
+    <style>
+        /* ========== 全局重置 & 基础 ========== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: 'Comic Sans MS', 'Chalkboard SE', 'PingFang SC', 'Microsoft YaHei', cursive, sans-serif;
+            background: linear-gradient(145deg, #d4ecff 0%, #b5dffa 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+            margin: 0;
+        }
+        /* ========== 游戏容器 ========== */
+        .game-container {
+            width: 1100px;
+            max-width: 100%;
+            height: 700px;
+            max-height: 98vh;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(6px);
+            border-radius: 56px 56px 48px 48px;
+            box-shadow: 0 20px 40px rgba(0, 40, 80, 0.25), inset 0 2px 8px rgba(255, 255, 255, 0.7);
+            padding: 20px 24px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            transition: height 0.2s;
+        }
+        /* ========== 顶栏 ========== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px dashed rgba(70, 150, 220, 0.25);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .game-title {
+            font-size: 26px;
+            font-weight: 700;
+            color: #1a5f8a;
+            text-shadow: 0 2px 6px rgba(255, 255, 255, 0.6);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .game-title .drop {
+            display: inline-block;
+            width: 34px;
+            height: 34px;
+            background: radial-gradient(circle at 35% 35%, #7fcaff, #1a8bc0);
+            border-radius: 50% 50% 50% 30%;
+            box-shadow: inset -3px -3px 8px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 60, 120, 0.2);
+            transform: rotate(-10deg);
+        }
+        .step-indicator {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #2b6f9e;
+            background: rgba(255, 255, 255, 0.5);
+            padding: 6px 16px 6px 12px;
+            border-radius: 40px;
+            box-shadow: inset 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .step-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #cfe2f2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a5f8a;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        .step-dot.active {
+            background: #4dabf7;
+            color: #fff;
+            border-color: #fff;
+            box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.4);
+            transform: scale(1.08);
+        }
+        .step-dot.done {
+            background: #8bc34a;
+            color: #fff;
+        }
+        /* ========== 主舞台 ========== */
+        .stage {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            border-radius: 32px;
+            margin-top: 10px;
+            background: rgba(240, 250, 255, 0.5);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+            min-height: 420px;
+        }
+        .scene {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 18px 22px 18px 22px;
+            display: none;
+            flex-direction: column;
+            transition: opacity 0.3s;
+            overflow-y: auto;
+        }
+        .scene.active {
+            display: flex;
+        }
+        /* ========== 通用组件 ========== */
+        .scene-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #12466e;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .scene-title small {
+            font-size: 16px;
+            font-weight: 400;
+            color: #3a7ca5;
+        }
+        .hint-box {
+            background: rgba(255, 255, 230, 0.7);
+            border-radius: 20px;
+            padding: 10px 18px;
+            font-size: 17px;
+            color: #1f5a7a;
+            border-left: 5px solid #ffb74d;
+            margin-bottom: 12px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        .btn-primary {
+            background: #4dabf7;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 30px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #2b7ec7, 0 6px 16px rgba(45, 130, 210, 0.25);
+            transition: all 0.08s linear;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            touch-action: manipulation;
+        }
+        .btn-primary:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #2b7ec7;
+        }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            transform: translateY(3px);
+            box-shadow: 0 3px 0 #2b7ec7;
+            pointer-events: none;
+        }
+        .btn-success {
+            background: #66bb6a;
+            box-shadow: 0 6px 0 #388e3c, 0 6px 16px rgba(76, 175, 80, 0.25);
+        }
+        .btn-success:active {
+            transform: translateY(5px);
+            box-shadow: 0 1px 0 #388e3c;
+        }
+        .feedback-msg {
+            font-size: 18px;
+            padding: 8px 18px;
+            border-radius: 30px;
+            background: rgba(255,255,240,0.8);
+            display: inline-block;
+            margin-top: 6px;
+            font-weight: 500;
+            color: #1f5a7a;
+        }
+        /* ========== 环节1：实验组装 ========== */
+        .assembly-area {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 12px;
+        }
+        .slot-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            flex: 1;
+            align-items: stretch;
+        }
+        .slot {
+            flex: 1;
+            min-width: 130px;
+            min-height: 100px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 24px;
+            border: 3px dashed #8bb8d9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 6px;
+            transition: all 0.2s;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.03);
+            position: relative;
+            gap: 4px;
+        }
+        .slot.drag-over {
+            border-color: #4dabf7;
+            background: rgba(77, 171, 247, 0.12);
+            transform: scale(1.02);
+        }
+        .slot .step-label {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a5f8a;
+            background: rgba(255,255,255,0.5);
+            padding: 2px 14px;
+            border-radius: 30px;
+        }
+        .slot .step-icon {
+            font-size: 42px;
+            line-height: 1.2;
+        }
+        .slot .step-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0f3b57;
+            text-align: center;
+        }
+        .slot .step-desc {
+            font-size: 13px;
+            color: #3a6f8f;
+            text-align: center;
+            background: rgba(255,255,240,0.5);
+            padding: 2px 12px;
+            border-radius: 20px;
+        }
+        .slot.correct {
+            border-color: #66bb6a;
+            background: rgba(102, 187, 106, 0.12);
+        }
+        .slot.wrong {
+            border-color: #ef5350;
+            background: rgba(239, 83, 80, 0.10);
+            animation: shake 0.3s;
+        }
+        @keyframes shake {
+            0%,100%{transform:translateX(0)}
+            25%{transform:translateX(-8px)}
+            75%{transform:translateX(8px)}
+        }
+        .material-pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            flex-shrink: 0;
+            padding: 10px 0 4px 0;
+            background: rgba(255,255,245,0.4);
+            border-radius: 30px;
+        }
+        .material-item {
+            background: white;
+            border-radius: 30px;
+            padding: 6px 18px 6px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 17px;
+            font-weight: 600;
+            color: #1a4f6e;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(255,255,255,0.7);
+            cursor: grab;
+            touch-action: none;
+            border: 2px solid #c5def0;
+            transition: all 0.15s;
+        }
+        .material-item:active {
+            cursor: grabbing;
+            transform: scale(0.95);
+        }
+        .material-item .mat-icon {
+            font-size: 28px;
+        }
+        .material-item.dragging {
+            opacity: 0.4;
+            transform: scale(0.92);
+        }
+        /* ========== 环节2：动态观察 ========== */
+        .observe-area {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: stretch;
+        }
+        .bag-container {
+            flex: 2;
+            min-width: 240px;
+            background: linear-gradient(180deg, #e3f0fa 0%, #c5def0 100%);
+            border-radius: 40px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-shadow: inset 0 -6px 0 #a0bccf;
+            min-height: 240px;
+        }
+        .bag-svg-wrap {
+            width: 100%;
+            max-width: 340px;
+            aspect-ratio: 1/0.9;
+            position: relative;
+        }
+        .bag-svg-wrap svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+            filter: drop-shadow(0 8px 16px rgba(0, 40, 70, 0.12));
+        }
+        .bag-svg-wrap .click-label {
+            position: absolute;
+            font-size: 14px;
+            font-weight: 700;
+            color: #12466e;
+            background: rgba(255,255,230,0.85);
+            padding: 4px 14px;
+            border-radius: 30px;
+            border: 2px solid #ffb74d;
+            pointer-events: none;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .bag-svg-wrap .click-label.show {
+            opacity: 1;
+        }
+        .observe-controls {
+            flex: 1;
+            min-width: 160px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            justify-content: center;
+            background: rgba(255,255,255,0.45);
+            border-radius: 30px;
+            padding: 18px 16px;
+        }
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .slider-group label {
+            font-size: 17px;
+            font-weight: 600;
+            color: #1a5f8a;
+            display: flex;
+            justify-content: space-between;
+        }
+        .slider-group input[type="range"] {
+            width: 100%;
+            height: 8px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #90caf9, #ffb74d);
+            outline: none;
+            -webkit-appearance: none;
+        }
+        .slider-group input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #ffcc80, #ff9800);
+            cursor: pointer;
+            border: 3px solid #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .observe-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 16px;
+            color: #12466e;
+            background: rgba(255,255,240,0.5);
+            border-radius: 20px;
+            padding: 8px 14px;
+            justify-content: center;
+        }
+        .observe-stats span {
+            background: white;
+            padding: 2px 16px;
+            border-radius: 30px;
+        }
+        .click-hint-grid {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-size: 14px;
+            color: #1f5a7a;
+        }
+        .click-hint-grid .tag {
+            background: rgba(255,255,240,0.7);
+            padding: 2px 14px;
+            border-radius: 30px;
+            border: 1px solid #b3d4eb;
+        }
+        /* ========== 环节3：原理对应 ========== */
+        .match-area {
+            display: flex;
+            flex: 1;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: stretch;
+        }
+        .match-col {
+            flex: 1;
+            min-width: 140px;
+            background: rgba(255,255,255,0.35);
+            border-radius: 28px;
+            padding: 12px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .match-col .col-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #12466e;
+            text-align: center;
+            border-bottom: 2px dashed rgba(70,150,220,0.2);
+            padding-bottom: 6px;
+        }
+        .match-item {
+            background: white;
+            border-radius: 20px;
+            padding: 10px 14px;
+            font-size: 17px;
+            font-weight: 600;
+            color: #0f3b57;
+            text-align: center;
+            border: 3px solid #c5def0;
+            cursor: pointer;
+            transition: all 0.15s;
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 56px;
+        }
+        .match-item .m-icon {
+            font-size: 26px;
+        }
+        .match-item.selected {
+            border-color: #4dabf7;
+            background: #e3f0fa;
+            transform: scale(1.02);
+        }
+        .match-item.matched {
+            border-color: #66bb6a;
+            background: #e8f5e9;
+            cursor: default;
+            opacity: 0.7;
+        }
+        .match-item.wrong-pick {
+            border-color: #ef5350;
+            background: #ffebee;
+            animation: shake 0.25s;
+        }
+        .match-connector {
+            flex: 0 0 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            color: #4dabf7;
+        }
+        /* ========== 环节4：闯关 ========== */
+        .quiz-area {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: 14px;
+            overflow-y: auto;
+        }
+        .quiz-item {
+            background: rgba(255,255,255,0.5);
+            border-radius: 24px;
+            padding: 14px 20px;
+            border: 2px solid rgba(255,255,255,0.6);
+        }
+        .quiz-item .q-text {
+            font-size: 19px;
+            font-weight: 600;
+            color: #0f3b57;
+            margin-bottom: 8px;
+        }
+        .quiz-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .quiz-options button {
+            background: white;
+            border: 2px solid #b3d4eb;
+            border-radius: 30px;
+            padding: 8px 22px;
+            font-size: 17px;
+            font-weight: 500;
+            color: #1a4f6e;
+            cursor: pointer;
+            transition: all 0.1s;
+            font-family: inherit;
+            touch-action: manipulation;
+        }
+        .quiz-options button:active {
+            transform: scale(0.95);
+        }
+        .quiz-options button.correct-answer {
+            border-color: #66bb6a;
+            background: #e8f5e9;
+        }
+        .quiz-options button.wrong-answer {
+            border-color: #ef5350;
+            background: #ffebee;
+        }
+        .quiz-options button:disabled {
+            opacity: 0.6;
+            cursor: default;
+        }
+        .quiz-result {
+            font-size: 18px;
+            font-weight: 600;
+            color: #12466e;
+            padding: 8px 18px;
+            border-radius: 30px;
+            background: rgba(255,255,240,0.6);
+            display: inline-block;
+        }
+        .badge-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 6px 0;
+        }
+        .badge {
+            font-size: 56px;
+            filter: drop-shadow(0 4px 12px rgba(255, 193, 7, 0.4));
+            animation: pop 0.5s ease;
+        }
+        @keyframes pop {
+            0%{transform:scale(0.2);opacity:0}
+            60%{transform:scale(1.3)}
+            100%{transform:scale(1);opacity:1}
+        }
+        /* ========== 底部控制 ========== */
+        .footer-ctrl {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            padding-top: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .footer-ctrl .left {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        /* ========== 响应式 ========== */
+        @media (max-width: 768px) {
+            .game-container {
+                height: auto;
+                min-height: 96vh;
+                border-radius: 32px;
+                padding: 14px 14px 18px;
+            }
+            .stage {
+                min-height: 400px;
+            }
+            .game-title {
+                font-size: 20px;
+            }
+            .game-title .drop {
+                width: 26px;
+                height: 26px;
+            }
+            .step-dot {
+                width: 26px;
+                height: 26px;
+                font-size: 13px;
+            }
+            .scene {
+                padding: 12px 12px 12px;
+            }
+            .scene-title {
+                font-size: 20px;
+            }
+            .slot {
+                min-width: 80px;
+                min-height: 70px;
+                padding: 6px 4px;
+            }
+            .slot .step-icon {
+                font-size: 28px;
+            }
+            .slot .step-name {
+                font-size: 13px;
+            }
+            .material-item {
+                font-size: 14px;
+                padding: 4px 12px 4px 10px;
+            }
+            .material-item .mat-icon {
+                font-size: 22px;
+            }
+            .match-col {
+                min-width: 100px;
+            }
+            .match-item {
+                font-size: 14px;
+                padding: 6px 10px;
+                min-height: 44px;
+            }
+            .observe-controls {
+                padding: 12px 10px;
+            }
+            .quiz-item .q-text {
+                font-size: 17px;
+            }
+            .quiz-options button {
+                font-size: 15px;
+                padding: 6px 16px;
+            }
+            .btn-primary {
+                font-size: 17px;
+                padding: 10px 20px;
+            }
+            .header {
+                padding-bottom: 6px;
+            }
+            .step-indicator {
+                font-size: 13px;
+                padding: 4px 12px 4px 8px;
+            }
+            .hint-box {
+                font-size: 15px;
+                padding: 8px 14px;
+            }
+            .match-connector {
+                flex: 0 0 20px;
+                font-size: 18px;
+            }
+        }
+        @media (max-width: 480px) {
+            .slot-row {
+                gap: 6px;
+            }
+            .slot {
+                min-width: 60px;
+                min-height: 60px;
+            }
+            .slot .step-icon {
+                font-size: 22px;
+            }
+            .slot .step-name {
+                font-size: 11px;
+            }
+            .material-item {
+                font-size: 12px;
+                padding: 3px 8px 3px 6px;
+            }
+            .material-item .mat-icon {
+                font-size: 18px;
+            }
+            .observe-area {
+                flex-direction: column;
+            }
+            .bag-container {
+                min-height: 160px;
+            }
+            .match-area {
+                flex-direction: column;
+            }
+            .match-connector {
+                transform: rotate(90deg);
+                padding: 2px 0;
+            }
+        }
+        /* ========== 滚动条美化 ========== */
+        .scene::-webkit-scrollbar {
+            width: 4px;
+        }
+        .scene::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+        }
+        .scene::-webkit-scrollbar-thumb {
+            background: #8bb8d9;
+            border-radius: 10px;
+        }
+        /* ========== 工具 ========== */
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .gap-8 {
+            gap: 8px;
+        }
+        .mt-6 {
+            margin-top: 6px;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .hidden {
+            display: none !important;
+        }
+        /* ========== 完成动画 ========== */
+        .celebrate {
+            animation: celeb 0.6s ease;
+        }
+        @keyframes celeb {
+            0%{transform:scale(0.8);opacity:0.4}
+            50%{transform:scale(1.1)}
+            100%{transform:scale(1);opacity:1}
+        }
+        /* 小水珠装饰 */
+        .drop-deco {
+            position: absolute;
+            border-radius: 50% 50% 50% 30%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.7), rgba(100, 190, 255, 0.3));
+            pointer-events: none;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container" id="app">
+    <!-- 顶栏 -->
+    <div class="header">
+        <div class="game-title">
+            <span class="drop"></span>
+            <span>袋中水的旅行</span>
+            <span style="font-size:16px;font-weight:400;color:#3a7ca5;">💧 模拟水循环</span>
+        </div>
+        <div class="step-indicator">
+            <span style="margin-right:4px;">第</span>
+            <span class="step-dot active" data-step="1">1</span>
+            <span class="step-dot" data-step="2">2</span>
+            <span class="step-dot" data-step="3">3</span>
+            <span class="step-dot" data-step="4">4</span>
+            <span style="margin-left:4px;">关</span>
+        </div>
+    </div>
+
+    <!-- 舞台 -->
+    <div class="stage" id="stage">
+        <!-- ========== 场景1：组装 ========== -->
+        <div class="scene active" data-scene="1">
+            <div class="scene-title">
+                🧪 实验组装
+                <small>— 拖拽材料到正确步骤</small>
+            </div>
+            <div class="hint-box">
+                💡 把下面的材料拖到对应的步骤框里，按正确顺序排列实验装置！
+            </div>
+            <div class="assembly-area">
+                <div class="slot-row" id="slotRow">
+                    <!-- 动态由js生成 4个slot -->
+                </div>
+                <div class="material-pool" id="materialPool">
+                    <!-- 动态由js生成 6种材料 -->
+                </div>
+                <div id="assemblyFeedback" class="feedback-msg text-center" style="margin-top:4px;">
+                    👆 拖动材料到步骤框中
+                </div>
+                <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;flex-shrink:0;padding-top:4px;">
+                    <button class="btn-primary" id="checkAssemblyBtn" disabled>✅ 检查顺序</button>
+                    <button class="btn-primary btn-success" id="resetAssemblyBtn">🔄 重新开始</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 场景2：观察 ========== -->
+        <div class="scene" data-scene="2">
+            <div class="scene-title">
+                🔬 动态观察
+                <small>— 调节温度，点击探索</small>
+            </div>
+            <div class="hint-box">
+                💡 拖动滑块改变温度，点击袋中的水、水珠或水滴查看科学原理！
+            </div>
+            <div class="observe-area">
+                <div class="bag-container">
+                    <div class="bag-svg-wrap" id="bagSvgWrap">
+                        <svg viewBox="0 0 340 300" xmlns="http://www.w3.org/2000/svg" id="bagSvg">
+                            <!-- 塑料袋背景 -->
+                            <rect x="30" y="20" width="280" height="220" rx="30" fill="rgba(200,230,255,0.35)" stroke="#7ab3d9" stroke-width="4" stroke-dasharray="6 4" />
+                            <!-- 袋内水 -->
+                            <ellipse cx="170" cy="190" rx="100" ry="30" fill="#4fc3f7" opacity="0.7" id="bagWater" />
+                            <ellipse cx="170" cy="188" rx="90" ry="20" fill="#81d4fa" opacity="0.5" />
+                            <!-- 水蒸气粒子 -->
+                            <g id="vaporGroup">
+                                <circle cx="140" cy="130" r="6" fill="rgba(255,255,255,0.4)" class="vapor" />
+                                <circle cx="190" cy="110" r="8" fill="rgba(255,255,255,0.3)" class="vapor" />
+                                <circle cx="220" cy="140" r="5" fill="rgba(255,255,255,0.3)" class="vapor" />
+                                <circle cx="120" cy="150" r="7" fill="rgba(255,255,255,0.25)" class="vapor" />
+                            </g>
+                            <!-- 袋壁小水珠 (凝结) -->
+                            <circle cx="80" cy="80" r="12" fill="rgba(100,200,255,0.5)" stroke="#4fc3f7" stroke-width="1.5" id="drop1" class="clickable-drop" data-type="condense" />
+                            <circle cx="250" cy="70" r="10" fill="rgba(100,200,255,0.5)" stroke="#4fc3f7" stroke-width="1.5" id="drop2" class="clickable-drop" data-type="condense" />
+                            <circle cx="130" cy="50" r="8" fill="rgba(100,200,255,0.4)" stroke="#4fc3f7" stroke-width="1.5" id="drop3" class="clickable-drop" data-type="condense" />
+                            <!-- 下落水滴 (降水) -->
+                            <ellipse cx="160" cy="150" rx="6" ry="12" fill="#29b6f6" opacity="0.8" id="rainDrop" class="clickable-drop" data-type="precipitate" />
+                            <ellipse cx="210" cy="160" rx="5" ry="10" fill="#29b6f6" opacity="0.7" id="rainDrop2" class="clickable-drop" data-type="precipitate" />
+                            <!-- 点击区域：袋中水 (蒸发) -->
+                            <ellipse cx="170" cy="188" rx="100" ry="30" fill="transparent" stroke="transparent" id="waterClickArea" style="cursor:pointer;" />
+                            <!-- 标签 -->
+                            <text x="140" y="230" font-size="14" fill="#1a5f8a" font-weight="600">💧 袋中水</text>
+                            <text x="60" y="64" font-size="13" fill="#1a5f8a" font-weight="500" opacity="0.7">💧 水珠</text>
+                            <text x="240" y="56" font-size="13" fill="#1a5f8a" font-weight="500" opacity="0.7">💧 水珠</text>
+                            <text x="170" y="134" font-size="13" fill="#1a5f8a" font-weight="500" opacity="0.7">💧 水滴</text>
+                        </svg>
+                        <!-- 浮动标签 (点击后显示) -->
+                        <div class="click-label" id="clickLabel" style="top:20%;left:30%;">🌊 蒸发</div>
+                    </div>
+                </div>
+                <div class="observe-controls">
+                    <div class="slider-group">
+                        <label>
+                            <span>☀️ 热源温度</span>
+                            <span id="tempValue">50%</span>
+                        </label>
+                        <input type="range" min="0" max="100" value="50" id="tempSlider" />
+                    </div>
+                    <div class="observe-stats">
+                        <span>💧 水量 <span id="waterAmount">80</span>%</span>
+                        <span>💨 蒸发 <span id="vaporLevel">中</span></span>
+                    </div>
+                    <div class="click-hint-grid">
+                        <span class="tag">🟦 点击袋中水 → 蒸发</span>
+                        <span class="tag">🟩 点击水珠 → 凝结</span>
+                        <span class="tag">🟧 点击水滴 → 降水</span>
+                    </div>
+                    <button class="btn-primary" id="resetObserveBtn" style="font-size:16px;padding:8px 20px;">🔄 重置观察</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========== 场景3：原理对应 ========== -->
+        <div class="scene" data-scene="3">
+            <div class="scene-title">
+                🔗 原理对应
+                <small>— 点击配对实验与自然</small>
+            </div>
+            <div class="hint-box">
+                💡 先点左侧实验元素，再点右侧对应的自然现象，完成配对！
+            </div>
+            <div class="match-area" id="matchArea">
+                <!-- 动态由js生成 -->
+            </div>
+            <div id="matchFeedback" class="feedback-msg text-center" style="margin-top:6px;">
+                👆 点击配对
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;flex-shrink:0;padding-top:6px;flex-wrap:wrap;">
+                <button class="btn-primary" id="resetMatchBtn">🔄 重新配对</button>
+            </div>
+        </div>
+
+        <!-- ========== 场景4：闯关 ========== -->
+        <div class="scene" data-scene="4">
+            <div class="scene-title">
+                🏆 探究闯关
+                <small>— 答对2题获得徽章</small>
+            </div>
+            <div class="hint-box">
+                💡 选出正确答案，检验你的水循环知识！
+            </div>
+            <div class="quiz-area" id="quizArea">
+                <!-- 动态由js生成 -->
+            </div>
+            <div class="badge-area" id="badgeArea">
+                <span id="quizResultText" class="quiz-result">📝 答题进度：0/3</span>
+                <span id="badgeDisplay"></span>
+            </div>
+            <div style="display:flex;justify-content:center;gap:12px;flex-shrink:0;padding-top:6px;flex-wrap:wrap;">
+                <button class="btn-primary" id="resetQuizBtn">🔄 重新闯关</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部 -->
+    <div class="footer-ctrl">
+        <div class="left">
+            <button class="btn-primary" id="prevBtn" style="font-size:16px;padding:8px 16px;">◀ 上一关</button>
+            <button class="btn-primary" id="nextBtn" style="font-size:16px;padding:8px 16px;">下一关 ▶</button>
+        </div>
+        <div style="font-size:15px;color:#3a7ca5;font-weight:500;background:rgba(255,255,255,0.3);padding:4px 16px;border-radius:30px;">
+            💧 小水珠的旅行
+        </div>
+    </div>
+</div>
+
+<script>
+    // ============================================================
+    //  全局状态
+    // ============================================================
+    const state = {
+        currentScene: 1, // 1-4
+        // 环节1
+        assembly: {
+            slots: [], // 存储每个slot当前放置的材料id (null表示空)
+            materials: [], // 材料列表 {id, name, icon, stepIndex}
+            correctOrder: [0, 1, 2, 3], // 正确顺序的material id
+            placed: 0,
+            checked: false,
+        },
+        // 环节2
+        observe: {
+            temp: 50,
+            water: 80,
+            vapor: 0.5,
+            clicked: [],
+        },
+        // 环节3
+        match: {
+            pairs: [], // {leftId, rightId, leftText, rightText, matched}
+            selectedLeft: null,
+            matchedCount: 0,
+        },
+        // 环节4
+        quiz: {
+            answers: [null, null, null],
+            correct: [1, 1, 0], // 索引
+            done: false,
+        }
+    };
+
+    // ============================================================
+    //  数据
+    // ============================================================
+    const ASSEMBLY_MATERIALS = [
+        { id: 0, name: '清水', icon: '💧', step: 0 },
+        { id: 1, name: '蓝色颜料', icon: '🎨', step: 1 },
+        { id: 2, name: '封口夹', icon: '🔒', step: 2 },
+        { id: 3, name: '台灯(热源)', icon: '💡', step: 3 },
+        { id: 4, name: '透明塑料袋', icon: '🛍️', step: -1 },
+        { id: 5, name: '小杯子', icon: '🥛', step: -1 },
+    ];
+    const ASSEMBLY_STEPS = [
+        { index: 0, label: '步骤1', name: '向袋中加水', icon: '💧', desc: '加入适量清水' },
+        { index: 1, label: '步骤2', name: '滴入颜料', icon: '🎨', desc: '滴入蓝色颜料' },
+        { index: 2, label: '步骤3', name: '密封袋口', icon: '🔒', desc: '用封口夹密封' },
+        { index: 3, label: '步骤4', name: '放置热源下', icon: '💡', desc: '放在台灯下方' },
+    ];
+
+    const MATCH_DATA = [
+        { left: '袋内的水', leftIcon: '💧', right: '海洋与湖泊', rightIcon: '🌊' },
+        { left: '台灯热源', leftIcon: '💡', right: '太阳', rightIcon: '☀️' },
+        { left: '塑料袋内壁', leftIcon: '🛍️', right: '高空冷空气层', rightIcon: '❄️' },
+        { left: '袋壁的小水滴', leftIcon: '💧', right: '云层中的小水珠', rightIcon: '☁️' },
+        { left: '滴落的水珠', leftIcon: '💧', right: '自然降雨', rightIcon: '🌧️' },
+    ];
+
+    const QUIZ_DATA = [
+        {
+            question: '塑料袋内壁上的小水珠是怎么形成的？',
+            options: ['水蒸气遇冷凝结而成', '从外面渗进来的', '袋子自己产生的'],
+            correct: 0,
+        },
+        {
+            question: '这个实验模拟了自然界的什么现象？',
+            options: ['水循环', '火山喷发', '地震'],
+            correct: 0,
+        },
+        {
+            question: '以下哪种方法能让袋里的水蒸发得更快？',
+            options: ['提高环境温度', '降低环境温度', '把袋子放在冰箱里'],
+            correct: 0,
+        },
+    ];
+
+    // ============================================================
+    //  工具
+    // ============================================================
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function $(sel, ctx) { return (ctx || document).querySelector(sel); }
+    function $$(sel, ctx) { return Array.from((ctx || document).querySelectorAll(sel)); }
+
+    // ============================================================
+    //  场景切换
+    // ============================================================
+    function goToScene(n) {
+        if (n < 1) n = 1;
+        if (n > 4) n = 4;
+        state.currentScene = n;
+        // 更新场景显示
+        $$('.scene').forEach(el => el.classList.remove('active'));
+        const target = document.querySelector(`.scene[data-scene="${n}"]`);
+        if (target) target.classList.add('active');
+        // 更新指示点
+        $$('.step-dot').forEach(d => {
+            const s = parseInt(d.dataset.step);
+            d.classList.remove('active', 'done');
+            if (s === n) d.classList.add('active');
+            else if (s < n) d.classList.add('done');
+        });
+        // 触发场景初始化
+        if (n === 1) initAssembly();
+        if (n === 2) initObserve();
+        if (n === 3) initMatch();
+        if (n === 4) initQuiz();
+        // 按钮状态
+        document.getElementById('prevBtn').disabled = (n === 1);
+        document.getElementById('nextBtn').disabled = (n === 4);
+    }
+
+    // ============================================================
+    //  环节1：实验组装
+    // ============================================================
+    let assemblyDragging = null;
+    let assemblyDragData = null;
+
+    function initAssembly() {
+        const row = document.getElementById('slotRow');
+        const pool = document.getElementById('materialPool');
+        // 重置状态
+        const shuffled = shuffle([0, 1, 2, 3]);
+        state.assembly.slots = shuffled.map((stepIdx, pos) => ({
+            position: pos,
+            stepIndex: stepIdx,
+            materialId: null, // 未放置
+        }));
+        state.assembly.placed = 0;
+        state.assembly.checked = false;
+        document.getElementById('checkAssemblyBtn').disabled = true;
+        document.getElementById('assemblyFeedback').textContent = '👆 拖动材料到步骤框中';
+
+        // 渲染slots
+        row.innerHTML = '';
+        state.assembly.slots.forEach((slot, idx) => {
+            const step = ASSEMBLY_STEPS.find(s => s.index === slot.stepIndex);
+            const div = document.createElement('div');
+            div.className = 'slot';
+            div.dataset.slotIdx = idx;
+            div.dataset.stepIdx = slot.stepIndex;
+            div.innerHTML = `
+                <div class="step-label">${step.label}</div>
+                <div class="step-icon">${step.icon}</div>
+                <div class="step-name">${step.name}</div>
+                <div class="step-desc">${step.desc}</div>
+                <div style="font-size:14px;color:#3a7ca5;margin-top:4px;" class="slot-material">⬜ 待放置</div>
+            `;
+            // 拖拽事件 (接收)
+            div.addEventListener('dragover', (e) => { e.preventDefault(); div.classList.add('drag-over'); });
+            div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+            div.addEventListener('drop', (e) => {
+                e.preventDefault();
+                div.classList.remove('drag-over');
+                const data = e.dataTransfer.getData('text/plain');
+                if (data) {
+                    const matId = parseInt(data);
+                    handleMaterialDrop(matId, idx);
+                }
+            });
+            // 触摸支持
+            div.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+            row.appendChild(div);
+        });
+
+        // 渲染材料池
+        pool.innerHTML = '';
+        const shuffledMats = shuffle([...ASSEMBLY_MATERIALS]);
+        shuffledMats.forEach(mat => {
+            const div = document.createElement('div');
+            div.className = 'material-item';
+            div.dataset.matId = mat.id;
+            div.draggable = true;
+            div.innerHTML = `<span class="mat-icon">${mat.icon}</span> ${mat.name}`;
+            // 拖拽
+            div.addEventListener('dragstart', (e) => {
+                assemblyDragging = mat.id;
+                e.dataTransfer.setData('text/plain', String(mat.id));
+                div.classList.add('dragging');
+            });
+            div.addEventListener('dragend', () => div.classList.remove('dragging'));
+            // 触摸拖拽
+            div.addEventListener('touchstart', (e) => {
+                const touch = e.touches[0];
+                assemblyDragData = { matId: mat.id, el: div, offsetX: touch.clientX - div.getBoundingClientRect().left, offsetY: touch.clientY - div.getBoundingClientRect().top };
+                div.style.opacity = '0.5';
+            }, { passive: true });
+            div.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!assemblyDragData) return;
+                const touch = e.touches[0];
+                // 检测悬停的slot
+                const slots = $$('.slot');
+                let targetSlot = null;
+                slots.forEach(s => {
+                    const rect = s.getBoundingClientRect();
+                    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                        targetSlot = s;
+                    }
+                    s.classList.remove('drag-over');
+                });
+                if (targetSlot) targetSlot.classList.add('drag-over');
+            }, { passive: false });
+            div.addEventListener('touchend', (e) => {
+                if (!assemblyDragData) return;
+                const touch = e.changedTouches[0];
+                const slots = $$('.slot');
+                let targetSlot = null;
+                slots.forEach(s => {
+                    const rect = s.getBoundingClientRect();
+                    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                        targetSlot = s;
+                    }
+                    s.classList.remove('drag-over');
+                });
+                if (targetSlot) {
+                    const idx = parseInt(targetSlot.dataset.slotIdx);
+                    handleMaterialDrop(assemblyDragData.matId, idx);
+                }
+                assemblyDragData.el.style.opacity = '1';
+                assemblyDragData = null;
+            }, { passive: true });
+            pool.appendChild(div);
+        });
+
+        // 按钮事件
+        document.getElementById('checkAssemblyBtn').onclick = checkAssembly;
+        document.getElementById('resetAssemblyBtn').onclick = () => { initAssembly(); };
+    }
+
+    function handleMaterialDrop(matId, slotIdx) {
+        const slot = state.assembly.slots[slotIdx];
+        // 检查是否已经有材料
+        if (slot.materialId !== null) {
+            document.getElementById('assemblyFeedback').textContent = '⚠️ 这个步骤已经有材料了！';
+            return;
+        }
+        // 检查材料是否已经被使用
+        const used = state.assembly.slots.some(s => s.materialId === matId);
+        if (used) {
+            document.getElementById('assemblyFeedback').textContent = '⚠️ 这个材料已经被使用了！';
+            return;
+        }
+        // 检查这个材料是否属于这个步骤 (step匹配)
+        const mat = ASSEMBLY_MATERIALS.find(m => m.id === matId);
+        if (mat.step !== slot.stepIndex) {
+            document.getElementById('assemblyFeedback').textContent = `❌  "${mat.name}" 不应该放在这里哦，试试其他位置！`;
+            // 闪烁错误
+            const slotEl = document.querySelector(`.slot[data-slot-idx="${slotIdx}"]`);
+            slotEl.classList.add('wrong');
+            setTimeout(() => slotEl.classList.remove('wrong'), 400);
+            return;
+        }
+        // 放置成功
+        slot.materialId = matId;
+        state.assembly.placed++;
+        // 更新UI
+        const slotEl = document.querySelector(`.slot[data-slot-idx="${slotIdx}"]`);
+        slotEl.querySelector('.slot-material').innerHTML = `✅ ${mat.icon} ${mat.name}`;
+        slotEl.classList.add('correct');
+        // 隐藏材料
+        const matEl = document.querySelector(`.material-item[data-mat-id="${matId}"]`);
+        if (matEl) matEl.style.display = 'none';
+        document.getElementById('assemblyFeedback').textContent = `✅ 放对了！ (${state.assembly.placed}/4)`;
+        if (state.assembly.placed === 4) {
+            document.getElementById('checkAssemblyBtn').disabled = false;
+            document.getElementById('assemblyFeedback').textContent = '🎉 所有材料已放置！点击"检查顺序"验证';
+        }
+    }
+
+    function checkAssembly() {
+        if (state.assembly.checked) return;
+        const slots = state.assembly.slots;
+        // 检查是否所有slot都已填充
+        if (slots.some(s => s.materialId === null)) {
+            document.getElementById('assemblyFeedback').textContent = '⚠️ 还有步骤没有放置材料！';
+            return;
+        }
+        // 检查顺序是否正确 (按stepIndex顺序)
+        const order = slots.map(s => s.stepIndex);
+        const correct = [0, 1, 2, 3];
+        let isCorrect = true;
+        for (let i = 0; i < 4; i++) {
+            if (order[i] !== correct[i]) { isCorrect = false; break; }
+        }
+        if (isCorrect) {
+            document.getElementById('assemblyFeedback').textContent = '🎉🎉 实验装置搭建完成！太棒了！ ✅';
+            document.getElementById('checkAssemblyBtn').disabled = true;
+            state.assembly.checked = true;
+            // 播放庆祝
+            document.querySelector('.assembly-area').classList.add('celebrate');
+            setTimeout(() => document.querySelector('.assembly-area').classList.remove('celebrate'), 700);
+            // 自动解锁下一关
+            setTimeout(() => {
+                if (state.currentScene === 1) {
+                    document.getElementById('nextBtn').click();
+                }
+            }, 1200);
+        } else {
+            document.getElementById('assemblyFeedback').textContent = '❌ 顺序不对，再调整一下步骤的顺序吧！ (正确顺序: 加水→加颜料→密封→加热)';
+            // 高亮错误的slot
+            slots.forEach((s, idx) => {
+                const el = document.querySelector(`.slot[data-slot-idx="${idx}"]`);
+                if (s.stepIndex !== correct[idx]) {
+                    el.classList.add('wrong');
+                    setTimeout(() => el.classList.remove('wrong'), 500);
+                }
+            });
+        }
+    }
+
+    // ============================================================
+    //  环节2：动态观察
+    // ============================================================
+    let observeAnimId = null;
+
+    function initObserve() {
+        const slider = document.getElementById('tempSlider');
+        const tempVal = document.getElementById('tempValue');
+        const waterAmt = document.getElementById('waterAmount');
+        const vaporLvl = document.getElementById('vaporLevel');
+
+        // 重置
+        state.observe.temp = 50;
+        state.observe.water = 80;
+        state.observe.vapor = 0.5;
+        slider.value = 50;
+        updateObserveUI();
+
+        // 事件
+        slider.oninput = function() {
+            const val = parseInt(this.value);
+            state.observe.temp = val;
+            updateObserveUI();
+            updateBagAnimation(val);
+        };
+
+        // 点击袋中水 (蒸发)
+        const waterArea = document.getElementById('waterClickArea');
+        waterArea.onclick = function(e) {
+            e.stopPropagation();
+            showClickLabel('🌊 蒸发', '水受热变成水蒸气，向上飘散', '#4fc3f7');
+            // 触发蒸发动画
+            createVaporBurst();
+            state.observe.water = Math.max(10, state.observe.water - 3);
+            updateObserveUI();
+        };
+
+        // 点击水珠 (凝结) - 使用事件委托
+        document.querySelectorAll('.clickable-drop[data-type="condense"]').forEach(el => {
+            el.onclick = function(e) {
+                e.stopPropagation();
+                showClickLabel('💧 凝结', '水蒸气遇到冷的袋壁，变回小水滴', '#66bb6a');
+                // 增加水珠效果
+                this.style.r = '16';
+                this.style.fill = 'rgba(100,200,255,0.8)';
+                setTimeout(() => { this.style.r = '12';
+                    this.style.fill = 'rgba(100,200,255,0.5)'; }, 400);
+            };
+        });
+
+        // 点击水滴 (降水)
+        document.querySelectorAll('.clickable-drop[data-type="precipitate"]').forEach(el => {
+            el.onclick = function(e) {
+                e.stopPropagation();
+                showClickLabel('🌧️ 降水', '小水珠聚集变重，滴落回袋底', '#ffb74d');
+                // 下落动画
+                const origY = parseFloat(this.getAttribute('cy') || 160);
+                this.setAttribute('cy', origY + 20);
+                setTimeout(() => { this.setAttribute('cy', origY); }, 300);
+            };
+        });
+
+        document.getElementById('resetObserveBtn').onclick = function() {
+            state.observe.water = 80;
+            state.observe.temp = 50;
+            slider.value = 50;
+            updateObserveUI();
+            updateBagAnimation(50);
+            document.getElementById('clickLabel').classList.remove('show');
+        };
+
+        // 初始动画
+        updateBagAnimation(50);
+    }
+
+    function updateObserveUI() {
+        const temp = state.observe.temp;
+        const water = state.observe.water;
+        document.getElementById('tempValue').textContent = temp + '%';
+        document.getElementById('waterAmount').textContent = water;
+        const vapor = temp / 100;
+        state.observe.vapor = vapor;
+        const level = vapor < 0.3 ? '低' : vapor < 0.6 ? '中' : '高';
+        document.getElementById('vaporLevel').textContent = level;
+        // 更新袋中水高度
+        const waterEl = document.getElementById('bagWater');
+        if (waterEl) {
+            const scale = 0.3 + (water / 100) * 0.7;
+            waterEl.setAttribute('ry', 20 * scale);
+            waterEl.setAttribute('rx', 80 * scale);
+        }
+        // 更新水蒸气可见度
+        const vapors = document.querySelectorAll('.vapor');
+        vapors.forEach(v => {
+            v.style.opacity = 0.1 + vapor * 0.7;
+            v.style.transform = `scale(${0.5 + vapor * 1.2})`;
+        });
+    }
+
+    function updateBagAnimation(temp) {
+        // 根据温度调整蒸发粒子数量
+        const vaporGroup = document.getElementById('vaporGroup');
+        const count = Math.floor(temp / 20) + 1;
+        // 动态调整可见性
+        const vapors = document.querySelectorAll('.vapor');
+        vapors.forEach((v, i) => {
+            v.style.display = i < count ? 'block' : 'none';
+        });
+        // 颜色变化
+        const waterEl = document.getElementById('bagWater');
+        if (waterEl) {
+            const hue = 190 + (temp / 100) * 20;
+            waterEl.style.fill = `hsl(${hue}, 70%, ${50 + temp/5}%)`;
+        }
+    }
+
+    function showClickLabel(text, desc, color) {
+        const label = document.getElementById('clickLabel');
+        label.textContent = `${text}  ${desc}`;
+        label.style.background = `rgba(255,255,240,0.92)`;
+        label.style.borderColor = color || '#ffb74d';
+        label.classList.add('show');
+        clearTimeout(label._hideTimer);
+        label._hideTimer = setTimeout(() => label.classList.remove('show'), 3000);
+    }
+
+    function createVaporBurst() {
+        const svg = document.getElementById('bagSvg');
+        for (let i = 0; i < 6; i++) {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            const x = 140 + Math.random() * 80;
+            const y = 130 + Math.random() * 40;
+            circle.setAttribute('cx', x);
+            circle.setAttribute('cy', y);
+            circle.setAttribute('r', 4 + Math.random() * 8);
+            circle.setAttribute('fill', 'rgba(255,255,255,0.6)');
+            circle.style.transition = 'all 1s ease-out';
+            circle.style.opacity = '1';
+            svg.appendChild(circle);
+            // 动画上升
+            setTimeout(() => {
+                circle.setAttribute('cy', parseFloat(circle.getAttribute('cy')) - 30 - Math.random() * 40);
+                circle.setAttribute('r', parseFloat(circle.getAttribute('r')) + 6);
+                circle.style.opacity = '0';
+            }, 20);
+            setTimeout(() => circle.remove(), 1100);
+        }
+    }
+
+    // ============================================================
+    //  环节3：原理对应
+    // ============================================================
+    let matchSelectedLeft = null;
+
+    function initMatch() {
+        const area = document.getElementById('matchArea');
+        const feedback = document.getElementById('matchFeedback');
+        // 重置
+        state.match.matchedCount = 0;
+        state.match.selectedLeft = null;
+        matchSelectedLeft = null;
+        feedback.textContent = '👆 点击左侧实验元素，再点击右侧自然现象配对';
+
+        // 打乱右侧顺序
+        const shuffledRight = shuffle([...MATCH_DATA]);
+
+        area.innerHTML = '';
+        const leftCol = document.createElement('div');
+        leftCol.className = 'match-col';
+        leftCol.innerHTML = '<div class="col-title">🧪 实验装置</div>';
+        const rightCol = document.createElement('div');
+        rightCol.className = 'match-col';
+        rightCol.innerHTML = '<div class="col-title">🌍 自然界</div>';
+        const connector = document.createElement('div');
+        connector.className = 'match-connector';
+        connector.textContent = '⬅️➡️';
+
+        // 左侧 (按原始顺序)
+        MATCH_DATA.forEach((item, idx) => {
+            const div = document.createElement('div');
+            div.className = 'match-item';
+            div.dataset.matchId = idx;
+            div.dataset.side = 'left';
+            div.dataset.matched = 'false';
+            div.innerHTML = `<span class="m-icon">${item.leftIcon}</span> ${item.left}`;
+            div.onclick = () => handleMatchClick(div, 'left');
+            leftCol.appendChild(div);
+        });
+
+        // 右侧 (打乱)
+        shuffledRight.forEach((item, idx) => {
+            const originalIdx = MATCH_DATA.indexOf(item);
+            const div = document.createElement('div');
+            div.className = 'match-item';
+            div.dataset.matchId = originalIdx;
+            div.dataset.side = 'right';
+            div.dataset.matched = 'false';
+            div.innerHTML = `<span class="m-icon">${item.rightIcon}</span> ${item.right}`;
+            div.onclick = () => handleMatchClick(div, 'right');
+            rightCol.appendChild(div);
+        });
+
+        area.appendChild(leftCol);
+        area.appendChild(connector);
+        area.appendChild(rightCol);
+
+        document.getElementById('resetMatchBtn').onclick = initMatch;
+    }
+
+    function handleMatchClick(el, side) {
+        if (el.dataset.matched === 'true') return;
+        if (side === 'left') {
+            // 取消之前选中的左侧
+            $$('.match-item.selected').forEach(e => e.classList.remove('selected'));
+            el.classList.add('selected');
+            matchSelectedLeft = el;
+            document.getElementById('matchFeedback').textContent = `👉 已选: ${el.textContent.trim()}，请点击右侧对应项`;
+        } else if (side === 'right') {
+            if (!matchSelectedLeft) {
+                document.getElementById('matchFeedback').textContent = '⚠️ 请先在左侧点击选择一个实验元素！';
+                el.classList.add('wrong-pick');
+                setTimeout(() => el.classList.remove('wrong-pick'), 350);
+                return;
+            }
+            const leftId = parseInt(matchSelectedLeft.dataset.matchId);
+            const rightId = parseInt(el.dataset.matchId);
+            if (leftId === rightId) {
+                // 配对成功
+                matchSelectedLeft.dataset.matched = 'true';
+                el.dataset.matched = 'true';
+                matchSelectedLeft.classList.remove('selected');
+                matchSelectedLeft.classList.add('matched');
+                el.classList.add('matched');
+                state.match.matchedCount++;
+                document.getElementById('matchFeedback').textContent = `✅ 配对成功！ (${state.match.matchedCount}/${MATCH_DATA.length})`;
+                matchSelectedLeft = null;
+                if (state.match.matchedCount === MATCH_DATA.length) {
+                    document.getElementById('matchFeedback').textContent = '🎉 全部配对完成！你太棒了！ 🎉';
+                    // 播放同步动画
+                    playSyncAnimation();
+                    setTimeout(() => {
+                        if (state.currentScene === 3) document.getElementById('nextBtn').click();
+                    }, 1800);
+                }
+            } else {
+                // 配对失败
+                el.classList.add('wrong-pick');
+                matchSelectedLeft.classList.add('wrong-pick');
+                document.getElementById('matchFeedback').textContent = '❌ 配对错误，再想想对应关系吧！';
+                setTimeout(() => {
+                    el.classList.remove('wrong-pick');
+                    matchSelectedLeft.classList.remove('wrong-pick');
+                    matchSelectedLeft.classList.remove('selected');
+                    matchSelectedLeft = null;
+                }, 500);
+            }
+        }
+    }
+
+    function playSyncAnimation() {
+        const items = $$('.match-item.matched');
+        items.forEach((el, i) => {
+            setTimeout(() => {
+                el.style.transform = 'scale(1.06)';
+                el.style.borderColor = '#ffb74d';
+                setTimeout(() => { el.style.transform = 'scale(1)';
+                    el.style.borderColor = '#66bb6a'; }, 300);
+            }, i * 120);
+        });
+    }
+
+    // ============================================================
+    //  环节4：闯关
+    // ============================================================
+    function initQuiz() {
+        const area = document.getElementById('quizArea');
+        const resultText = document.getElementById('quizResultText');
+        const badgeDisplay = document.getElementById('badgeDisplay');
+        state.quiz.answers = [null, null, null];
+        state.quiz.done = false;
+        badgeDisplay.innerHTML = '';
+        resultText.textContent = '📝 答题进度：0/3';
+
+        area.innerHTML = '';
+        QUIZ_DATA.forEach((q, idx) => {
+            const div = document.createElement('div');
+            div.className = 'quiz-item';
+            div.dataset.qIdx = idx;
+            div.innerHTML = `
+                <div class="q-text">${idx+1}. ${q.question}</div>
+                <div class="quiz-options" data-q="${idx}">
+                </div>
+                <div style="margin-top:6px;font-size:15px;color:#3a7ca5;" class="q-feedback"></div>
+            `;
+            const optContainer = div.querySelector('.quiz-options');
+            q.options.forEach((opt, oi) => {
+                const btn = document.createElement('button');
+                btn.textContent = opt;
+                btn.dataset.optIdx = oi;
+                btn.onclick = () => handleQuizAnswer(idx, oi, btn);
+                optContainer.appendChild(btn);
+            });
+            area.appendChild(div);
+        });
+
+        document.getElementById('resetQuizBtn').onclick = initQuiz;
+    }
+
+    function handleQuizAnswer(qIdx, optIdx, btn) {
+        if (state.quiz.done) return;
+        if (state.quiz.answers[qIdx] !== null) return; // 已答
+
+        const q = QUIZ_DATA[qIdx];
+        const isCorrect = (optIdx === q.correct);
+        state.quiz.answers[qIdx] = optIdx;
+
+        const container = btn.closest('.quiz-options');
+        const allBtns = container.querySelectorAll('button');
+        allBtns.forEach(b => b.disabled = true);
+
+        // 标记正确/错误
+        allBtns.forEach((b, i) => {
+            if (i === q.correct) b.classList.add('correct-answer');
+            if (i === optIdx && !isCorrect) b.classList.add('wrong-answer');
+        });
+
+        const feedback = container.closest('.quiz-item').querySelector('.q-feedback');
+        if (isCorrect) {
+            feedback.textContent = '✅ 回答正确！太棒了！';
+            feedback.style.color = '#2e7d32';
+        } else {
+            feedback.textContent = `❌ 再想想哦！正确答案是：${q.options[q.correct]}`;
+            feedback.style.color = '#c62828';
+        }
+
+        // 更新进度
+        const answered = state.quiz.answers.filter(a => a !== null).length;
+        document.getElementById('quizResultText').textContent = `📝 答题进度：${answered}/3`;
+
+        // 判断是否完成
+        if (answered === 3) {
+            state.quiz.done = true;
+            const correctCount = state.quiz.answers.filter((a, i) => a === QUIZ_DATA[i].correct).length;
+            const badgeDisplay = document.getElementById('badgeDisplay');
+            if (correctCount >= 2) {
+                badgeDisplay.innerHTML = '<span class="badge">🏅</span><span style="font-size:20px;font-weight:700;color:#f9a825;"> 水循环小实验家</span>';
+                document.getElementById('quizResultText').textContent = `🎉 答对 ${correctCount}/3，获得徽章！`;
+                // 庆祝
+                document.querySelector('.quiz-area').classList.add('celebrate');
+                setTimeout(() => document.querySelector('.quiz-area').classList.remove('celebrate'), 700);
+            } else {
+                badgeDisplay.innerHTML = '💪 再练练吧，答对2题就能获得徽章！';
+                document.getElementById('quizResultText').textContent = `📝 答对 ${correctCount}/3，再试试！`;
+            }
+        }
+    }
+
+    // ============================================================
+    //  导航
+    // ============================================================
+    document.getElementById('prevBtn').onclick = () => goToScene(state.currentScene - 1);
+    document.getElementById('nextBtn').onclick = () => goToScene(state.currentScene + 1);
+
+    // ============================================================
+    //  初始化
+    // ============================================================
+    goToScene(1);
+
+    // 窗口尺寸调整 - 保持布局
+    window.addEventListener('resize', () => {});
+    console.log('💧 袋中水的旅行 · 水循环实验已启动！');
+</script>
+</body>
+</html>
